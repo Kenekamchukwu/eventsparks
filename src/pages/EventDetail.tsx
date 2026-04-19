@@ -1,0 +1,221 @@
+import { useState, useCallback } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Calendar, MapPin, Clock, ArrowLeft, Pencil, Trash2, Share2, Copy, Check, Globe } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import logo from "@/assets/eventsparks-logo.png";
+import { Badge } from "@/components/ui/badge";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { Button } from "@/components/ui/button";
+import { CreateEventDialog, type EventFormData } from "@/components/CreateEventDialog";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const categoryColors: Record<string, string> = {
+  Bitcoin: "bg-[hsl(36,100%,50%)] text-primary-foreground",
+  Ethereum: "bg-[hsl(240,60%,55%)] text-primary-foreground",
+  Solana: "bg-[hsl(270,80%,55%)] text-primary-foreground",
+  Base: "bg-[hsl(220,90%,55%)] text-primary-foreground",
+  TON: "bg-[hsl(200,80%,50%)] text-primary-foreground",
+  Cosmos: "bg-[hsl(260,50%,50%)] text-primary-foreground",
+  Polkadot: "bg-[hsl(340,80%,55%)] text-primary-foreground",
+  "Multi-Chain": "bg-primary text-primary-foreground",
+  AI: "bg-[hsl(160,70%,40%)] text-primary-foreground",
+  "Blockchain Conference": "bg-primary text-primary-foreground",
+  "Tech Conference": "bg-accent text-accent-foreground",
+  Hackathon: "bg-secondary text-secondary-foreground",
+  Meetup: "bg-primary/80 text-primary-foreground",
+  Workshop: "bg-accent/80 text-accent-foreground",
+  Webinar: "bg-secondary/80 text-secondary-foreground",
+  Summit: "bg-primary/60 text-primary-foreground",
+  Bootcamp: "bg-accent/60 text-accent-foreground",
+  Other: "bg-muted text-muted-foreground",
+};
+
+const ShareButtons = ({ event }: { event: { title: string; date: string; location: string } }) => {
+  const [copied, setCopied] = useState(false);
+  const eventUrl = window.location.href;
+  const text = `${event.title} — ${event.date} at ${event.location}`;
+
+  const copyLink = useCallback(() => {
+    navigator.clipboard.writeText(eventUrl);
+    setCopied(true);
+    toast.success("Link copied!");
+    setTimeout(() => setCopied(false), 2000);
+  }, [eventUrl]);
+
+  const shareLinks = [
+    { name: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(text + "\n" + eventUrl)}`, color: "hover:bg-[#25D366]/10 hover:text-[#25D366]", icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> },
+    { name: "X", href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(eventUrl)}`, color: "hover:bg-foreground/10 hover:text-foreground", icon: <svg viewBox="0 0 24 24" className="w-4.5 h-4.5" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+    { name: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`, color: "hover:bg-[#1877F2]/10 hover:text-[#1877F2]", icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> },
+    { name: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`, color: "hover:bg-[#0A66C2]/10 hover:text-[#0A66C2]", icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> },
+  ];
+
+  return (
+    <div className="mt-10 pt-8 border-t border-border/50">
+      <div className="flex items-center gap-3 mb-4">
+        <Share2 className="w-5 h-5 text-muted-foreground" />
+        <span className="text-sm font-medium text-muted-foreground">Share this event</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {shareLinks.map((link) => (
+          <a key={link.name} href={link.href} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/50 text-sm font-medium text-muted-foreground transition-colors ${link.color}`}>
+            {link.icon} {link.name}
+          </a>
+        ))}
+        <button onClick={copyLink} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/50 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted">
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? "Copied!" : "Copy link"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const EventDetail = () => {
+  const { user, isAdmin } = useAuth();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const { data: event, isLoading } = useQuery({
+    queryKey: ["event", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("events").select("*").eq("id", id!).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: EventFormData) => {
+      const { error } = await supabase.from("events").update({
+        title: data.title, date: data.date, time: data.time, location: data.location,
+        description: data.description || null, category: data.category, image: data.image || null,
+        country: data.country || null, city: data.city || null,
+      }).eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event", id] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      toast.success("Event updated!");
+      setEditOpen(false);
+    },
+    onError: () => toast.error("Failed to update event."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("events").delete().eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      toast.success("Event deleted.");
+      navigate("/");
+    },
+    onError: () => toast.error("Failed to delete event."),
+  });
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground text-lg">Loading event...</p></div>;
+  }
+
+  if (!event) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground text-lg">Event not found.</p>
+        <Button asChild variant="outline" className="rounded-full"><Link to="/"><ArrowLeft className="w-4 h-4 mr-2" /> Back to Events</Link></Button>
+      </div>
+    );
+  }
+
+  const editEventData = {
+    id: event.id, title: event.title, date: event.date, time: event.time,
+    location: event.location, description: event.description || "", category: event.category,
+    image: event.image || "", country: event.country || "", city: event.city || "",
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <nav className="flex items-center justify-between px-6 py-4 md:px-10">
+        <Link to="/"><img src={logo} alt="EventSparks" className="h-10 md:h-12" /></Link>
+        <Button asChild variant="outline" className="rounded-full"><Link to="/"><ArrowLeft className="w-4 h-4 mr-2" /> Back</Link></Button>
+      </nav>
+
+      <div className="max-w-4xl mx-auto px-4 py-8 md:px-8">
+        <div className="aspect-[21/9] rounded-2xl overflow-hidden bg-muted mb-8">
+          {event.image ? (
+            <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+              <Calendar className="w-20 h-20 text-primary/30" />
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <Badge className={`${categoryColors[event.category] || categoryColors.Other} gap-1.5`}><CategoryIcon category={event.category} /> {event.category}</Badge>
+          {isAdmin && (
+            <div className="flex gap-2">
+              <CreateEventDialog
+                onCreateEvent={() => {}}
+                editEvent={editEventData}
+                onEditEvent={(data) => updateMutation.mutate(data)}
+                open={editOpen} onOpenChange={setEditOpen}
+                trigger={<Button variant="outline" size="sm" className="gap-1.5 rounded-full"><Pencil className="w-3.5 h-3.5" /> Edit</Button>}
+              />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5 rounded-full text-destructive hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /> Delete</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this event?</AlertDialogTitle>
+                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteMutation.mutate()} className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </div>
+
+        <h1 className="text-3xl md:text-5xl font-normal tracking-tight leading-tight mb-6" style={{ fontFamily: "var(--font-display)" }}>{event.title}</h1>
+
+        <div className="flex flex-wrap gap-6 mb-8 text-muted-foreground">
+          <div className="flex items-center gap-2"><Calendar className="w-5 h-5" /><span>{event.date}</span></div>
+          <div className="flex items-center gap-2"><Clock className="w-5 h-5" /><span>{event.time}</span></div>
+          {(event.city || event.country) && (
+            <div className="flex items-center gap-2"><Globe className="w-5 h-5" /><span>{[event.city, event.country].filter(Boolean).join(", ")}</span></div>
+          )}
+          <div className="flex items-center gap-2"><MapPin className="w-5 h-5" /><span>{event.location}</span></div>
+        </div>
+
+        {event.description && (
+          <div className="prose prose-lg max-w-none text-foreground/80">
+            <p className="text-lg leading-relaxed whitespace-pre-wrap">{event.description}</p>
+          </div>
+        )}
+
+        <ShareButtons event={event} />
+      </div>
+
+      <footer className="border-t border-border/50 px-6 py-8 text-center text-sm text-muted-foreground mt-16">
+        <p>© 2026 EventSparks. Africa's blockchain & tech events hub.</p>
+      </footer>
+    </div>
+  );
+};
+
+export default EventDetail;
