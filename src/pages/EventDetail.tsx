@@ -1,19 +1,13 @@
 import { useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, MapPin, Clock, ArrowLeft, Pencil, Trash2, Share2, Copy, Check, Globe } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar, MapPin, Clock, ArrowLeft, Share2, Copy, Check, Globe } from "lucide-react";
 import logo from "@/assets/eventsparks-logo.png";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { Button } from "@/components/ui/button";
-import { CreateEventDialog, type EventFormData } from "@/components/CreateEventDialog";
 import { toast } from "sonner";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 const categoryColors: Record<string, string> = {
   Bitcoin: "bg-[hsl(36,100%,50%)] text-primary-foreground",
@@ -77,11 +71,7 @@ const ShareButtons = ({ event }: { event: { title: string; date: string; locatio
 };
 
 const EventDetail = () => {
-  const { user, isAdmin } = useAuth();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [editOpen, setEditOpen] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["event", id],
@@ -91,37 +81,6 @@ const EventDetail = () => {
       return data;
     },
     enabled: !!id,
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async (data: EventFormData) => {
-      const { error } = await supabase.from("events").update({
-        title: data.title, date: data.date, time: data.time, location: data.location,
-        description: data.description || null, category: data.category, image: data.image || null,
-        country: data.country || null, city: data.city || null,
-      }).eq("id", id!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["event", id] });
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      toast.success("Event updated!");
-      setEditOpen(false);
-    },
-    onError: () => toast.error("Failed to update event."),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("events").delete().eq("id", id!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      toast.success("Event deleted.");
-      navigate("/");
-    },
-    onError: () => toast.error("Failed to delete event."),
   });
 
   if (isLoading) {
@@ -136,12 +95,6 @@ const EventDetail = () => {
       </div>
     );
   }
-
-  const editEventData = {
-    id: event.id, title: event.title, date: event.date, time: event.time,
-    location: event.location, description: event.description || "", category: event.category,
-    image: event.image || "", country: event.country || "", city: event.city || "",
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -163,32 +116,6 @@ const EventDetail = () => {
 
         <div className="flex items-start justify-between gap-4 mb-4">
           <Badge className={`${categoryColors[event.category] || categoryColors.Other} gap-1.5`}><CategoryIcon category={event.category} /> {event.category}</Badge>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <CreateEventDialog
-                onCreateEvent={() => {}}
-                editEvent={editEventData}
-                onEditEvent={(data) => updateMutation.mutate(data)}
-                open={editOpen} onOpenChange={setEditOpen}
-                trigger={<Button variant="outline" size="sm" className="gap-1.5 rounded-full"><Pencil className="w-3.5 h-3.5" /> Edit</Button>}
-              />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1.5 rounded-full text-destructive hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /> Delete</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete this event?</AlertDialogTitle>
-                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deleteMutation.mutate()} className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
         </div>
 
         <h1 className="text-3xl md:text-5xl font-normal tracking-tight leading-tight mb-6" style={{ fontFamily: "var(--font-display)" }}>{event.title}</h1>
