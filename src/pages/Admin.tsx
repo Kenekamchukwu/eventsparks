@@ -66,16 +66,16 @@ const Admin = () => {
 
   const createMutation = useMutation({
     mutationFn: async (event: EventFormData) => {
-      const { error } = await supabase.from("events").insert({
+      const { error } = await supabaseAdmin.from("events").insert({
         title: event.title,
         date: event.date,
-        time: event.time,
         location: event.location,
         description: event.description || null,
         category: event.category,
         image: event.image || null,
         country: event.country || null,
         city: event.city || null,
+        registration_link: event.registration_link || null,
       });
       if (error) throw error;
     },
@@ -88,18 +88,18 @@ const Admin = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...event }: EventFormData & { id: string }) => {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("events")
         .update({
           title: event.title,
           date: event.date,
-          time: event.time,
           location: event.location,
           description: event.description || null,
           category: event.category,
           image: event.image || null,
           country: event.country || null,
           city: event.city || null,
+          registration_link: event.registration_link || null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -115,7 +115,7 @@ const Admin = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("events").delete().eq("id", id);
+      const { error } = await supabaseAdmin.from("events").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -252,13 +252,13 @@ const Admin = () => {
                       id: event.id,
                       title: event.title,
                       date: event.date,
-                      time: event.time,
                       location: event.location,
                       description: event.description || "",
                       category: event.category,
                       image: event.image || "",
                       country: event.country || "",
                       city: event.city || "",
+                      registration_link: event.registration_link || "",
                     });
                     setEditOpen(true);
                   }}

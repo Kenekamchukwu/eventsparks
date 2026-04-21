@@ -30,13 +30,13 @@ const categoryGroups = [
 export interface EventFormData {
   title: string;
   date: string;
-  time: string;
   location: string;
   description: string;
   category: string;
   image: string;
   country: string;
   city: string;
+  registration_link: string;
 }
 
 interface CreateEventDialogProps {
@@ -64,7 +64,7 @@ export const CreateEventDialog = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const emptyForm: EventFormData = { title: "", date: "", time: "", location: "", description: "", category: "", image: "", country: "", city: "" };
+  const emptyForm: EventFormData = { title: "", date: "", location: "", description: "", category: "", image: "", country: "", city: "", registration_link: "" };
   const [form, setForm] = useState<EventFormData>(editEvent || emptyForm);
 
   const [lastEditId, setLastEditId] = useState<string | undefined>();
@@ -103,7 +103,7 @@ export const CreateEventDialog = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.date || !form.time || !form.location || !form.category || !form.image || !form.country || !form.city) return;
+    if (!form.title || !form.date || !form.location || !form.category || !form.image || !form.country || !form.city) return;
     if (editEvent && onEditEvent) {
       onEditEvent(form);
     } else {
@@ -139,15 +139,9 @@ export const CreateEventDialog = ({
             <Label htmlFor="title">Event Title</Label>
             <Input id="title" placeholder="e.g. React Summit 2026" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input id="date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">Time</Label>
-              <Input id="time" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="date">Date</Label>
+            <Input id="date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -205,6 +199,11 @@ export const CreateEventDialog = ({
               </div>
             )}
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="registration_link">Registration Link</Label>
+            <Input id="registration_link" type="url" placeholder="https://..." value={form.registration_link} onChange={(e) => setForm({ ...form, registration_link: e.target.value })} />
           </div>
 
           <div className="space-y-2">

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, MapPin, Clock, ArrowLeft, Share2, Copy, Check, Globe } from "lucide-react";
+import { Calendar, MapPin, ArrowLeft, Share2, Copy, Check, Globe, ExternalLink } from "lucide-react";
 import logo from "@/assets/eventsparks-logo.png";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -122,7 +122,6 @@ const EventDetail = () => {
 
         <div className="flex flex-wrap gap-6 mb-8 text-muted-foreground">
           <div className="flex items-center gap-2"><Calendar className="w-5 h-5" /><span>{event.date}</span></div>
-          <div className="flex items-center gap-2"><Clock className="w-5 h-5" /><span>{event.time}</span></div>
           {(event.city || event.country) && (
             <div className="flex items-center gap-2"><Globe className="w-5 h-5" /><span>{[event.city, event.country].filter(Boolean).join(", ")}</span></div>
           )}
@@ -132,6 +131,16 @@ const EventDetail = () => {
         {event.description && (
           <div className="prose prose-lg max-w-none text-foreground/80">
             <p className="text-lg leading-relaxed whitespace-pre-wrap">{event.description}</p>
+          </div>
+        )}
+
+        {event.registration_link && (
+          <div className="mt-8">
+            <Button asChild size="lg" className="rounded-full px-8 font-semibold gap-2">
+              <a href={event.registration_link} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4" /> Register for this Event
+              </a>
+            </Button>
           </div>
         )}
 

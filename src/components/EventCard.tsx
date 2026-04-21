@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Clock, Globe } from "lucide-react";
+import { Calendar, MapPin, Globe, ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
@@ -8,13 +8,14 @@ export interface EventData {
   id: string;
   title: string;
   date: string;
-  time: string;
+  time?: string | null;
   location: string;
   description: string | null;
   category: string;
   image?: string | null;
   country?: string | null;
   city?: string | null;
+  registration_link?: string | null;
 }
 
 const categoryColors: Record<string, string> = {
@@ -57,6 +58,11 @@ export const EventCard = ({ event }: { event: EventData }) => {
               <CategoryIcon category={event.category} />
               {event.category}
             </Badge>
+            {event.registration_link && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                <ExternalLink className="w-3 h-3" /> Register
+              </span>
+            )}
           </div>
           <h3 className="text-lg font-semibold leading-tight line-clamp-2" style={{ fontFamily: "var(--font-display)" }}>
             {event.title}
@@ -66,10 +72,6 @@ export const EventCard = ({ event }: { event: EventData }) => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="w-3.5 h-3.5" />
               <span>{event.date}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{event.time}</span>
             </div>
             {(event.city || event.country) && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

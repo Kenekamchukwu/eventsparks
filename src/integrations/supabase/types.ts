@@ -25,7 +25,8 @@ export type Database = {
           id: string
           image: string | null
           location: string
-          time: string
+          registration_link: string | null
+          time: string | null
           title: string
           user_id: string | null
         }
@@ -39,7 +40,8 @@ export type Database = {
           id?: string
           image?: string | null
           location: string
-          time: string
+          registration_link?: string | null
+          time?: string | null
           title: string
           user_id?: string | null
         }
@@ -53,7 +55,8 @@ export type Database = {
           id?: string
           image?: string | null
           location?: string
-          time?: string
+          registration_link?: string | null
+          time?: string | null
           title?: string
           user_id?: string | null
         }
