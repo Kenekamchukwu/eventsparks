@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase, adminEventsCall } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,19 +66,18 @@ const Admin = () => {
 
   const createMutation = useMutation({
     mutationFn: async (event: EventFormData) => {
-      await adminEventsCall("create", {
-        event: {
-          title: event.title,
-          date: event.date,
-          location: event.location,
-          description: event.description || null,
-          category: event.category,
-          image: event.image || null,
-          country: event.country || null,
-          city: event.city || null,
-          registration_link: event.registration_link || null,
-        },
+      const { error } = await supabase.from("events").insert({
+        title: event.title,
+        date: event.date,
+        location: event.location,
+        description: event.description || null,
+        category: event.category,
+        image: event.image || null,
+        country: event.country || null,
+        city: event.city || null,
+        registration_link: event.registration_link || null,
       });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
@@ -89,9 +88,9 @@ const Admin = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...event }: EventFormData & { id: string }) => {
-      await adminEventsCall("update", {
-        id,
-        event: {
+      const { error } = await supabase
+        .from("events")
+        .update({
           title: event.title,
           date: event.date,
           location: event.location,
@@ -101,8 +100,9 @@ const Admin = () => {
           country: event.country || null,
           city: event.city || null,
           registration_link: event.registration_link || null,
-        },
-      });
+        })
+        .eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
@@ -115,7 +115,8 @@ const Admin = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await adminEventsCall("delete", { id });
+      const { error } = await supabase.from("events").delete().eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
