@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X, Image as ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AFRICAN_COUNTRIES } from "@/lib/locations";
 
@@ -50,6 +51,50 @@ interface CreateEventDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+// Downscale + re-encode large photos before upload. Big files are the most
+// common trigger for flaky uploads (ERR_HTTP2_PROTOCOL_ERROR / "Failed to
+// fetch"), so shrinking them to a sane size makes uploads far more reliable.
+// Small images and non-photo formats (gif/svg) are passed through untouched.
+async function compressImage(file: File, maxDim = 1600, quality = 0.82): Promise<Blob> {
+  if (file.size < 400 * 1024 || file.type === "image/gif" || file.type === "image/svg+xml") {
+    return file;
+  }
+  try {
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const img: HTMLImageElement = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = dataUrl;
+    });
+    let { width, height } = img;
+    if (width > maxDim || height > maxDim) {
+      const scale = Math.min(maxDim / width, maxDim / height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, width, height);
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+    // Keep the original if re-encoding failed or didn't actually shrink it.
+    if (!blob || blob.size >= file.size) return file;
+    return blob;
+  } catch {
+    return file;
+  }
+}
+
 export const CreateEventDialog = ({
   onCreateEvent,
   editEvent,
@@ -79,21 +124,39 @@ export const CreateEventDialog = ({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
 
     setUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
+      const compressed = await compressImage(file);
+      // compressImage returns a fresh Blob only when it re-encoded to JPEG;
+      // otherwise it returns the original File untouched.
+      const reencoded = compressed !== file;
+      const fileExt = reencoded ? "jpg" : file.name.split(".").pop() || "jpg";
+      const contentType = reencoded ? "image/jpeg" : file.type;
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from("event-images").upload(fileName, file);
+
+      const { error: uploadError } = await supabase.storage
+        .from("event-images")
+        .upload(fileName, compressed, { cacheControl: "3600", contentType, upsert: false });
       if (uploadError) throw uploadError;
+
       const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(fileName);
       setForm((prev) => ({ ...prev, image: urlData.publicUrl }));
       setImagePreview(urlData.publicUrl);
+      toast.success("Image uploaded");
     } catch (err) {
       console.error("Upload failed:", err);
+      toast.error(
+        "Image upload failed. Check your connection or try disabling browser extensions, then retry."
+      );
     } finally {
       setUploading(false);
+      // Reset the input so picking the same file again re-triggers onChange.
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
