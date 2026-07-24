@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AFRICAN_COUNTRIES } from "@/lib/locations";
-import { CitySearch } from "@/components/CitySearch";
 
 const categoryGroups = [
   {
@@ -165,17 +164,12 @@ export const CreateEventDialog = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
-              <CitySearch
+              <Input
+                id="city"
+                placeholder="e.g. Lagos"
                 value={form.city}
-                country={form.country}
-                onChange={(city, c) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    city,
-                    country: c ?? prev.country,
-                  }));
-                }}
-                placeholder={form.country ? "Search city..." : "Search any city..."}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                required
               />
             </div>
           </div>

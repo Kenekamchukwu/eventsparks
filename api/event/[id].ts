@@ -1,24 +1,10 @@
 // Vercel Edge Function — dynamic OG meta for /event/:id
-// Crawlers → per-event OG HTML (so WhatsApp/Twitter previews show event image)
-// Real users → SPA shell (React Router takes over client-side)
+// Only crawlers are routed here (see vercel.json `has` user-agent rule), so real
+// users load the SPA directly via the catch-all rewrite and never hit this.
+// This returns per-event OG HTML so WhatsApp/Twitter/etc previews show the event
+// image, then meta-refreshes any human who clicks through to the real event page.
 
 export const config = { runtime: "edge" };
-
-const CRAWLER_UA =
-  /Twitterbot|facebookexternalhit|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|ia_archiver|vkShare|W3C_Validator|redditbot|Applebot|Pinterest|Googlebot/i;
-
-// Minimal SPA shell — Vite injects the correct hashed script at build time,
-// so we serve a redirect to "/" and let the catch-all rewrite handle it.
-// The browser will load "/" which Vercel serves as index.html, then React Router
-// reads the URL and renders the correct EventDetail page.
-const SPA_SHELL = `<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="refresh" content="0; url=__EVENT_URL__" />
-  </head>
-  <body></body>
-</html>`;
 
 function escapeHtml(str: string): string {
   return str
@@ -31,7 +17,6 @@ function escapeHtml(str: string): string {
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const ua = req.headers.get("user-agent") ?? "";
 
   const pathParts = url.pathname.split("/");
   const eventId = pathParts[pathParts.length - 1];
@@ -39,14 +24,7 @@ export default async function handler(req: Request): Promise<Response> {
   const siteUrl = process.env.SITE_URL ?? "https://www.eventsparks.xyz";
   const eventUrl = `${siteUrl}/event/${eventId}`;
 
-  // Non-crawlers: just redirect to the event URL so the SPA loads normally
-  if (!CRAWLER_UA.test(ua)) {
-    return new Response(SPA_SHELL.replace("__EVENT_URL__", eventUrl), {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-  }
-
-  // Crawlers: query Supabase REST API directly and return OG meta HTML
+  // Query Supabase REST API directly and return OG meta HTML
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 

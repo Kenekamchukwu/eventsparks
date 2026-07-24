@@ -2,6 +2,13 @@
   "rewrites": [
     {
       "source": "/event/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|Googlebot|redditbot|vkShare|W3C_Validator|Embedly|Bot|bot|Crawler|crawler|spider).*"
+        }
+      ],
       "destination": "/api/event/:id"
     },
     {
