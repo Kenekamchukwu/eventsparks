@@ -304,7 +304,8 @@ const Admin = () => {
           {events.map((event) => (
             <div key={event.id} className="relative group">
               <EventCard event={event} />
-              <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+              {/* Always visible on mobile (no hover); reveal on hover on desktop. */}
+              <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
                 <Button
                   size="sm"
                   variant="secondary"

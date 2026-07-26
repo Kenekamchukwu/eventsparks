@@ -9,6 +9,11 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+// Ensure a registration link is treated as an absolute URL. Without this, a
+// value like "luma.com/abc" (no protocol) renders as a relative link and 404s.
+const normalizeUrl = (url: string): string =>
+  /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+
 const categoryColors: Record<string, string> = {
   Bitcoin: "bg-[hsl(36,100%,50%)] text-primary-foreground",
   Ethereum: "bg-[hsl(240,60%,55%)] text-primary-foreground",
@@ -140,7 +145,7 @@ const EventDetail = () => {
         {event.registration_link && (
           <div className="mt-8">
             <Button asChild size="lg" className="rounded-full px-8 font-semibold gap-2">
-              <a href={event.registration_link} target="_blank" rel="noopener noreferrer">
+              <a href={normalizeUrl(event.registration_link)} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4" /> Register for this Event
               </a>
             </Button>
