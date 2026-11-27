@@ -6,6 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function escapeHtml(value: string): string {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -49,32 +54,32 @@ serve(async (req) => {
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>${event.title} — EventSparks</title>
-    <meta name="description" content="${description}" />
+    <title>${escapeHtml(event.title)} — EventSparks</title>
+    <meta name="description" content="${escapeHtml(description)}" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="EventSparks" />
-    <meta property="og:url" content="${eventUrl}" />
-    <meta property="og:title" content="${event.title}" />
-    <meta property="og:description" content="${description}" />
-    <meta property="og:image" content="${image}" />
+    <meta property="og:url" content="${escapeHtml(eventUrl)}" />
+    <meta property="og:title" content="${escapeHtml(event.title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${escapeHtml(image)}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@EventSparks" />
-    <meta name="twitter:title" content="${event.title}" />
-    <meta name="twitter:description" content="${description}" />
-    <meta name="twitter:image" content="${image}" />
+    <meta name="twitter:title" content="${escapeHtml(event.title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${escapeHtml(image)}" />
 
     <!-- Redirect real users to the SPA -->
-    <meta http-equiv="refresh" content="0; url=${eventUrl}" />
-    <link rel="canonical" href="${eventUrl}" />
+    <meta http-equiv="refresh" content="0; url=${escapeHtml(eventUrl)}" />
+    <link rel="canonical" href="${escapeHtml(eventUrl)}" />
   </head>
   <body>
-    <p>Redirecting to <a href="${eventUrl}">${event.title}</a>…</p>
+    <p>Redirecting to <a href="${escapeHtml(eventUrl)}">${escapeHtml(event.title)}</a>…</p>
   </body>
 </html>`;
 
