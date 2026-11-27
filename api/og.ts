@@ -28,7 +28,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   try {
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
-    const key = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+    const key = process.env.VITE_SUPABASE_ANON_KEY;
 
     if (eventId && supabaseUrl && key) {
       const apiRes = await fetch(
